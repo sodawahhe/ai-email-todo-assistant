@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>学术仪表盘 / Academic Dashboard</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+    background: linear-gradient(180deg, #f8f9fa 0%, #e8eaed 100%);
+    color: #333; min-height: 100vh; padding: 20px;
+  }
+  .container { max-width: 720px; margin: 0 auto; }
+  .header {
+    background: linear-gradient(135deg, #1a73e8, #0d47a1);
+    color: white; padding: 24px; border-radius: 16px; margin-bottom: 16px;
+    box-shadow: 0 4px 12px rgba(26,115,232,0.25);
+  }
+  .header h1 { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+  .header .meta { font-size: 13px; opacity: 0.9; }
+  .stats {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+    margin-top: 16px;
+  }
+  .stat-tile {
+    background: rgba(255,255,255,0.15); padding: 12px 8px; border-radius: 8px;
+    text-align: center;
+  }
+  .stat-num { font-size: 22px; font-weight: 700; line-height: 1; }
+  .stat-label { font-size: 11px; opacity: 0.8; margin-top: 4px; }
+
+  .progress-wrap {
+    background: rgba(255,255,255,0.2); border-radius: 10px; height: 12px;
+    margin-top: 16px; overflow: hidden;
+  }
+  .progress-bar {
+    background: linear-gradient(90deg, #34a853, #aed581);
+    height: 100%; border-radius: 10px; transition: width 0.5s;
+  }
+
+  .card {
+    background: white; border-radius: 12px; margin-bottom: 14px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06); overflow: hidden;
+  }
+  .card-header {
+    padding: 12px 18px; font-weight: 600; font-size: 15px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card-header.overdue { background: #fce8e6; color: #c5221f; border-left: 4px solid #d93025; }
+  .card-header.h48   { background: #fce8e6; color: #c5221f; border-left: 4px solid #ea4335; }
+  .card-header.week  { background: #fff8e1; color: #b06000; border-left: 4px solid #fbbc04; }
+  .card-header.later { background: #e8eaed; color: #5f6368; border-left: 4px solid #9aa0a6; }
+  .card-header.noDate{ background: #f3e8fd; color: #6a1b9a; border-left: 4px solid #8e24aa; }
+  .card-body { padding: 8px 18px; }
+  .empty { padding: 14px 18px; color: #999; font-size: 13px; text-align: center; }
+
+  .item {
+    padding: 12px 0; border-bottom: 1px solid #f0f0f0;
+    display: flex; align-items: flex-start; gap: 10px;
+  }
+  .item:last-child { border-bottom: none; }
+  .item.done .title { text-decoration: line-through; color: #999; }
+  .item.done .meta  { opacity: 0.5; }
+  .check {
+    flex-shrink: 0; width: 22px; height: 22px; border: 2px solid #ccc;
+    border-radius: 6px; cursor: pointer; transition: all 0.15s;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; color: white; background: white;
+  }
+  .check:hover { border-color: #34a853; }
+  .check.checked { background: #34a853; border-color: #34a853; }
+
+  .body { flex: 1; }
+  .title { font-size: 14px; font-weight: 500; line-height: 1.4; }
+  .meta { font-size: 12px; color: #777; margin-top: 4px; }
+  .course-tag {
+    display: inline-block; background: #e8f0fe; color: #1a73e8;
+    font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 4px;
+    margin-right: 6px;
+  }
+  .actions { font-size: 12px; margin-top: 4px; }
+  .actions a { color: #999; margin-right: 12px; text-decoration: none; }
+  .actions a:hover { color: #1a73e8; }
+
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 10px;
+    font-size: 12px; font-weight: 600; margin-left: 6px;
+    background: rgba(0,0,0,0.06); color: #555;
+  }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: #323232; color: white; padding: 12px 20px; border-radius: 24px;
+    font-size: 14px; opacity: 0; transition: all 0.3s; z-index: 999;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 480px) {
+    .stats { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <? if (flash) { ?>
+  <div id="flash" style="background:linear-gradient(135deg,#34a853,#1e8e3e);color:white;padding:14px 18px;border-radius:12px;margin-bottom:14px;font-weight:600;font-size:15px;text-align:center;box-shadow:0 4px 12px rgba(52,168,83,0.3);transition:opacity 0.6s;">
+    <?= flash ?>
+  </div>
+  <script>
+    setTimeout(function(){ var el=document.getElementById('flash'); if(el){ el.style.opacity='0'; setTimeout(function(){ el.style.display='none'; }, 700); } }, 3500);
+  </script>
+  <? } ?>
+
+  <!-- 头部：进度条 + 4 项数据 -->
+  <div class="header">
+    <h1>📊 学术仪表盘</h1>
+    <div class="meta">Academic Dashboard · 实时更新</div>
+
+    <? var pct = today.total > 0 ? Math.round(today.done / today.total * 100) : 0; ?>
+    <div class="progress-wrap">
+      <div class="progress-bar" style="width: <?= pct ?>%;"></div>
+    </div>
+
+    <div class="stats">
+      <div class="stat-tile">
+        <div class="stat-num"><?= today.done ?>/<?= today.total ?></div>
+        <div class="stat-label">今日进度</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-num">🔥<?= today.streak ?></div>
+        <div class="stat-label">连胜天数</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-num">⭐<?= today.xp ?></div>
+        <div class="stat-label">今日 XP</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-num"><?= week.done ?></div>
+        <div class="stat-label">本周已完成</div>
+      </div>
+    </div>
+  </div>
+
+  <? function renderItem(t, token) { ?>
+    <div class="item" data-id="<?= t.todoId ?>">
+      <div class="check" onclick="markDone(this, '<?= t.todoId ?>', '<?= token ?>')"></div>
+      <div class="body">
+        <div class="title">
+          <? if (t.course) { ?><span class="course-tag"><?= t.course ?></span><? } ?>
+          <? if (t.titleZh && t.titleEn && t.titleZh !== t.titleEn) { ?>
+            <?= t.titleZh ?>
+            <div style="font-size:12.5px;color:#888;font-weight:400;margin-top:1px;"><?= t.titleEn ?></div>
+          <? } else { ?>
+            <?= t.titleZh || t.titleEn || '(无标题)' ?>
+          <? } ?>
+        </div>
+        <div class="meta">
+          📅 <? if (t.deadline) { ?>
+            <?= Utilities.formatDate(t.deadline, tz, 'MM-dd HH:mm') ?>
+          <? } else if (t.deadlineRaw) { ?>
+            <?= t.deadlineRaw ?>
+          <? } else { ?>
+            无截止
+          <? } ?>
+          <span class="badge"><?= (t.priority || 'medium').toUpperCase().charAt(0) ?></span>
+          <? if (t.overdueDays) { ?>
+            <span class="badge" style="background:#d93025;color:white;">⚠️ 已逾期<?= t.overdueDays ?>天</span>
+          <? } ?>
+        </div>
+        <div class="actions">
+          <? if (t.sourceLink) { ?><a href="<?= t.sourceLink ?>" target="_blank">🔗 打开来源</a><? } ?>
+          <a href="#" onclick="markIgnored(event, '<?= t.todoId ?>', '<?= token ?>')">⏭️ 忽略</a>
+        </div>
+      </div>
+    </div>
+  <? } ?>
+
+  <!-- 已逾期 -->
+  <? if (todo.byBucket.overdue.length > 0) { ?>
+  <div class="card">
+    <div class="card-header overdue">
+      ⚠️ 已逾期 / Overdue
+      <span class="badge"><?= todo.byBucket.overdue.length ?></span>
+    </div>
+    <div class="card-body">
+      <? todo.byBucket.overdue.forEach(function(t) { renderItem(t, token); }); ?>
+    </div>
+  </div>
+  <? } ?>
+
+  <!-- 48 小时内 -->
+  <div class="card">
+    <div class="card-header h48">
+      ⏰ 48 小时内 / Next 48h
+      <span class="badge"><?= todo.byBucket.h48.length ?></span>
+    </div>
+    <div class="card-body">
+      <? if (todo.byBucket.h48.length === 0) { ?>
+        <div class="empty">暂无紧急任务 🎉</div>
+      <? } else { ?>
+        <? todo.byBucket.h48.forEach(function(t) { renderItem(t, token); }); ?>
+      <? } ?>
+    </div>
+  </div>
+
+  <!-- 本周 -->
+  <div class="card">
+    <div class="card-header week">
+      📅 本周 / This Week
+      <span class="badge"><?= todo.byBucket.week.length ?></span>
+    </div>
+    <div class="card-body">
+      <? if (todo.byBucket.week.length === 0) { ?>
+        <div class="empty">本周无其他任务</div>
+      <? } else { ?>
+        <? todo.byBucket.week.forEach(function(t) { renderItem(t, token); }); ?>
+      <? } ?>
+    </div>
+  </div>
+
+  <!-- 之后 -->
+  <? if (todo.byBucket.later.length > 0) { ?>
+  <div class="card">
+    <div class="card-header later">
+      🗓️ 之后 / Later
+      <span class="badge"><?= todo.byBucket.later.length ?></span>
+    </div>
+    <div class="card-body">
+      <? todo.byBucket.later.forEach(function(t) { renderItem(t, token); }); ?>
+    </div>
+  </div>
+  <? } ?>
+
+  <!-- 无截止 -->
+  <? if (todo.byBucket.noDate.length > 0) { ?>
+  <div class="card">
+    <div class="card-header noDate">
+      ❓ 无明确截止 / No Deadline
+      <span class="badge"><?= todo.byBucket.noDate.length ?></span>
+    </div>
+    <div class="card-body">
+      <? todo.byBucket.noDate.forEach(function(t) { renderItem(t, token); }); ?>
+    </div>
+  </div>
+  <? } ?>
+
+  <!-- 非课程待办：实习求职 / 校园活动（v1.8，不混进上面的课程桶） -->
+  <? [['career', '💼 实习 / 求职 / Career'], ['campus', '🏫 校园活动 / Campus']].forEach(function(c) {
+       var list = todo.extras[c[0]];
+       if (list.length === 0) return; ?>
+  <div class="card">
+    <div class="card-header later">
+      <?= c[1] ?>
+      <span class="badge"><?= list.length ?></span>
+    </div>
+    <div class="card-body">
+      <? list.forEach(function(t) { renderItem(t, token); }); ?>
+    </div>
+  </div>
+  <? }); ?>
+
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+function showToast(msg) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(function() { el.classList.remove('show'); }, 1800);
+}
+
+function markDone(checkEl, todoId, token) {
+  if (checkEl.classList.contains('checked')) return;
+  checkEl.classList.add('checked');
+  checkEl.textContent = '✓';
+  var item = checkEl.closest('.item');
+  item.classList.add('done');
+  showToast('✅ +10 XP');
+  // 异步触发后端更新（不等待响应；用户感觉立即完成）
+  fetch(window.location.pathname + '?token=' + encodeURIComponent(token) + '&action=done&id=' + encodeURIComponent(todoId), { mode: 'no-cors' });
+}
+
+function markIgnored(ev, todoId, token) {
+  ev.preventDefault();
+  var item = document.querySelector('.item[data-id="' + todoId + '"]');
+  if (item) item.style.opacity = '0.4';
+  showToast('⏭️ 已忽略');
+  fetch(window.location.pathname + '?token=' + encodeURIComponent(token) + '&action=ignore&id=' + encodeURIComponent(todoId), { mode: 'no-cors' });
+}
+</script>
+
+</body>
+</html>
